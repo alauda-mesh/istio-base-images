@@ -1,0 +1,51 @@
+name: Build
+on:
+  workflow_call:
+    inputs:
+      owner:
+        required: true
+        type: string
+      image:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+      melange_package:
+        default: false
+        type: boolean
+jobs:
+  build:
+    timeout-minutes: 150 # required due to hadolint (need to improve the build time somehow)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v5
+      - name: Setup QEMU
+        if: ${{ inputs.melange_package }}
+        uses: docker/setup-qemu-action@v3
+      - name: Build apk package (melange)
+        uses: chainguard-dev/actions/melange-build@main
+        if: ${{ inputs.melange_package }}
+        with:
+          sign-with-temporary-key: true
+          config: ${{ inputs.image }}/${{ inputs.image }}.melange.yaml
+          repository-path: ${{ github.workspace }}/${{ inputs.image }}/packages
+          archs: x86_64,aarch64
+      - name: Build image
+        uses: chainguard-images/actions/apko-build@main
+        with:
+          config: ${{ inputs.image }}/${{ inputs.image }}.apko.yaml
+          tag: ghcr.io/${{ inputs.owner }}/${{ inputs.image }}:${{ inputs.version }}
+          build-repository-append: ${{ github.workspace }}/${{ inputs.image }}/packages
+          keyring-append: ${{ inputs.melange_package && format('{0}/melange.rsa.pub', github.workspace) || '' }}
+      - name: Load image into docker daemon
+        run: docker load < output.tar
+      - name: Dive analysis (amd64)
+        uses: MaxymVlasov/dive-action@v1.5.0
+        with:
+          image: ghcr.io/${{ inputs.owner }}/${{ inputs.image }}:${{ inputs.version }}-amd64
+      - name: Dive analysis (arm64)
+        uses: MaxymVlasov/dive-action@v1.5.0
+        with:
+          image: ghcr.io/${{ inputs.owner }}/${{ inputs.image }}:${{ inputs.version }}-arm64

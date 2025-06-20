@@ -1,0 +1,82 @@
+name: Publish
+on:
+  workflow_call:
+    inputs:
+      owner:
+        required: true
+        type: string
+      image:
+        required: true
+        type: string
+      version:
+        required: false
+        type: string
+      revision:
+        required: true
+        type: string
+      melange_package:
+        default: false
+        type: boolean
+    secrets:
+      gcr_token:
+        description: 'Personal Access Token to be used to push to GitHub Container Registry'
+        required: true
+jobs:
+  publish:
+    name: Publish to GCR (${{ inputs.image }})
+    timeout-minutes: 150 # required due to hadolint (need to improve the build time somehow)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      packages: write
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+      - name: Setup QEMU
+        if: ${{ inputs.melange_package }}
+        uses: docker/setup-qemu-action@v3
+      - name: Build apk package (melange)
+        uses: chainguard-dev/actions/melange-build@main
+        if: ${{ inputs.melange_package }}
+        with:
+          sign-with-temporary-key: true
+          config: ${{ inputs.image }}/${{ inputs.image }}.melange.yaml
+          repository-path: ${{ github.workspace }}/${{ inputs.image }}/packages
+          archs: x86_64,aarch64
+      - name: Generate date
+        id: source-date
+        run: |
+          echo "date=$(date -u +%Y-%m-%dT%H:%M:%S)" >> ${GITHUB_OUTPUT}
+          echo "epoch=$(date -u +%s)" >> ${GITHUB_OUTPUT}
+        shell: sh
+      - name: Generate version if not specified
+        id: set-version
+        run: |
+          INPUT_VERSION="${{ inputs.version }}"
+
+          if [[ -z "$INPUT_VERSION" ]]; then
+            GENERATED_VERSION=$(date +'%Y.%m.%d-%H%M%S')
+            echo "Version not specified. Generating: $GENERATED_VERSION"
+          else
+            GENERATED_VERSION="$INPUT_VERSION"
+            echo "Using specified version: $GENERATED_VERSION"
+          fi
+
+          echo "version=$GENERATED_VERSION" >> "$GITHUB_OUTPUT"
+      - name: Publish to GitHub Container Registry
+        uses: chainguard-images/actions/apko-snapshot@main
+        with:
+          config: ${{ inputs.image }}/${{ inputs.image }}.apko.yaml
+          base-tag: ghcr.io/${{ inputs.owner }}/${{ inputs.image }}
+          target-tag: latest
+          additional-tags: ${{ steps.set-version.outputs.version }}
+          sbom-attest: true
+          slsa-attest: true
+          generic-user: ${{ inputs.owner }}
+          generic-pass: ${{ secrets.gcr_token }}
+          annotations: org.opencontainers.image.revision:${{ inputs.revision }},org.opencontainers.image.created:${{ steps.source-date.outputs.date }},org.opencontainers.image.version:${{ steps.set-version.outputs.version }}
+          source-date-epoch: ${{ steps.source-date.outputs.epoch }}
+          build-repository-append: ${{ github.workspace }}/${{ inputs.image }}/packages
+          keyring-append: ${{ inputs.melange_package && format('{0}/melange.rsa.pub', github.workspace) || '' }}

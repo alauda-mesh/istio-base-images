@@ -1,0 +1,25 @@
+name: Cleanup
+on:
+  workflow_call:
+    inputs:
+      owner:
+        required: true
+        type: string
+      image:
+        required: true
+        type: string
+jobs:
+  cleanup:
+    name: Delete old package versions (${{ inputs.image }})
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/delete-package-versions@v5
+        with:
+          owner: ${{ inputs.owner }}
+          package-name: ${{ inputs.image }}
+          package-type: container
+          min-versions-to-keep: 90
+          ignore-versions: latest

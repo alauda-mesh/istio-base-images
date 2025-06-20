@@ -30,6 +30,6 @@ accounts:
   run-as: 65535
 
 archs:
-  - amd64
+  - x86_64
   - aarch64
 
