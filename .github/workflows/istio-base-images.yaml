@@ -19,15 +19,20 @@ on:
 
 jobs:
   generate-version:
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.set-version.outputs.version }}
     steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
       - name: Generate version
         id: set-version
         run: |
-          echo "version=$(date -u +'%Y-%m-%dT%H-%M-%S')" >> ${GITHUB_OUTPUT}
+          if [ -f VERSION ]; then
+            echo "version=$(cat VERSION)" >> ${GITHUB_OUTPUT}
+          else
+            echo "version=$(date -u +'%Y-%m-%dT%H-%M-%S')" >> ${GITHUB_OUTPUT}
+          fi
         shell: sh
 
   build:
@@ -93,3 +98,49 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository_owner }}/${{ github.repository }}
           tags: |
             ghcr.io/${{ github.repository_owner }}/base:${{ needs.generate-version.outputs.version }}
+
+  publish-app-base:
+    if: github.event_name != 'pull_request'
+    needs: [generate-version]
+    strategy:
+      matrix:
+        target:
+          # For vm tests
+          - image: app_sidecar_base_debian_12
+            dockerfile: docker/Dockerfile.app_sidecar_base
+          - image: app_sidecar_base_ubuntu_noble
+            dockerfile: docker/Dockerfile.app_sidecar_base
+          - image: app_sidecar_base_ubuntu_bionic
+            dockerfile: docker/Dockerfile.app_sidecar_base
+          - image: app_sidecar_base_rockylinux_9  # newest RHEL-based
+            dockerfile: docker/Dockerfile.app_sidecar_base_centos
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push app base image
+        uses: docker/build-push-action@v5
+        with:
+          context: docker
+          file: ${{ matrix.target.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository_owner }}/${{ github.repository }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.target.image }}:${{ needs.generate-version.outputs.version }}
