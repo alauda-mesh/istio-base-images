@@ -17,7 +17,6 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
         uses: actions/checkout@v4
 
@@ -42,12 +41,14 @@ jobs:
       # Build APKs with melange
       - name: Build APKs
         id: melange
-        uses: chainguard-dev/actions/melange-build@main
+        uses: ./.github/actions/melange-build
         with:
           archs: aarch64,x86_64
           empty-workspace: false
           multi-config: ${{ env.APK_LIST }}
           workdir: ./wolfi
+          version: v0.26.11
+          sign-with-key: true
 
       # Copy the public key to the packages directory
       - name: Copy Public Key to Packages

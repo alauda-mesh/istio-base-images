@@ -1,21 +1,17 @@
 name: Istio Distroless
 on:
-  schedule:
-    - cron: '0 4 * * *'
   push:
     branches:
       - main
     paths:
       - '.github/workflows/_shared**'
       - '.github/workflows/istio-distroless.yml'
-      - 'configs/istio-distroless**'
-      - 'package-configs/alauda-baselayout**'
+      - 'configs/distroless.apko.yaml'
   pull_request:
     paths:
       - '.github/workflows/_shared**'
-      - '.github/workflows/distroless.yml'
-      - 'configs/istio-distroless**'
-      - 'package-configs/alauda-baselayout**'
+      - '.github/workflows/istio-distroless.yml'
+      - 'configs/distroless.apko.yaml'
   workflow_dispatch:
 jobs:
   build:
@@ -25,7 +21,6 @@ jobs:
       owner: ${{ github.repository_owner }}
       image: distroless
       version: pr-${{ github.event.pull_request.head.sha }}
-      melange_package: true
   publish:
     permissions:
       actions: read
@@ -37,16 +32,6 @@ jobs:
     with:
       owner: ${{ github.repository_owner }}
       image: distroless
-      version: 1.${{ github.run_number }}.${{ github.run_attempt }}
       revision: ${{ github.sha }}
-      melange_package: true
     secrets:
       gcr_token: ${{ secrets.GITHUB_TOKEN }}
-  # cleanup:
-  #   permissions:
-  #     packages: write
-  #   if: github.event_name != 'pull_request'
-  #   uses: ./.github/workflows/_shared_cleanup.yaml
-  #   with:
-  #     owner: ${{ github.repository_owner }}
-  #     image: distroless

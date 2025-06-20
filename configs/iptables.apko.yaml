@@ -1,14 +1,14 @@
 contents:
-  build_repositories:
-    - '@local packages'
   repositories:
     - https://packages.wolfi.dev/os
+    - https://alauda-mesh.github.io/istio-base-images
   keyring:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    - https://alauda-mesh.github.io/istio-base-images/melange.rsa.pub
   packages:
     - ca-certificates-bundle
     - wolfi-baselayout
-    - alauda-baselayout@local
+    - alauda-baselayout
     - glibc
     - iptables
     - ip6tables
