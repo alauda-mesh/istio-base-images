@@ -57,7 +57,7 @@ jobs:
           INPUT_VERSION="${{ inputs.version }}"
 
           if [[ -z "$INPUT_VERSION" ]]; then
-            GENERATED_VERSION=$(date +'%Y.%m.%d-%H%M%S')
+            GENERATED_VERSION=$(date +'%Y-%m-%dT%H-%M-%S')
             echo "Version not specified. Generating: $GENERATED_VERSION"
           else
             GENERATED_VERSION="$INPUT_VERSION"
