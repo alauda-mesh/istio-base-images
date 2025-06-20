@@ -42,11 +42,11 @@ jobs:
       melange_package: true
     secrets:
       gcr_token: ${{ secrets.GITHUB_TOKEN }}
-  cleanup:
-    permissions:
-      packages: write
-    if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/_shared_cleanup.yaml
-    with:
-      owner: ${{ github.repository_owner }}
-      image: distroless
+  # cleanup:
+  #   permissions:
+  #     packages: write
+  #   if: github.event_name != 'pull_request'
+  #   uses: ./.github/workflows/_shared_cleanup.yaml
+  #   with:
+  #     owner: ${{ github.repository_owner }}
+  #     image: distroless
