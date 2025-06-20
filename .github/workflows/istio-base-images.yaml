@@ -1,27 +1,33 @@
-name: Build istio base distroless image
+name: Build istio base images
 on:
   push:
     branches:
       - main
     paths:
       - '.github/workflows/_shared**'
-      - '.github/workflows/istio-distroless.yml'
-      - 'configs/distroless.apko.yaml'
+      - '.github/workflows/istio-base-images.yaml'
+      - 'configs/**.yaml'
   pull_request:
     paths:
       - '.github/workflows/_shared**'
-      - '.github/workflows/istio-distroless.yml'
-      - 'configs/distroless.apko.yaml'
+      - '.github/workflows/istio-base-images.yaml'
+      - 'configs/**.yaml'
   workflow_dispatch:
 jobs:
   build:
+    strategy:
+      matrix:
+        image: [distroless, iptables]
     if: github.event_name == 'pull_request'
     uses: ./.github/workflows/_shared_build.yaml
     with:
       owner: ${{ github.repository_owner }}
-      image: distroless
+      image: ${{ matrix.image }}
       version: pr-${{ github.event.pull_request.head.sha }}
   publish:
+    strategy:
+      matrix:
+        image: [distroless, iptables]
     permissions:
       actions: read
       contents: read
@@ -31,7 +37,7 @@ jobs:
     uses: ./.github/workflows/_shared_publish.yaml
     with:
       owner: ${{ github.repository_owner }}
-      image: distroless
+      image: ${{ matrix.image }}
       revision: ${{ github.sha }}
     secrets:
       gcr_token: ${{ secrets.GITHUB_TOKEN }}
