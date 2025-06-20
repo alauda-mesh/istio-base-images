@@ -11,9 +11,6 @@ on:
       version:
         required: false
         type: string
-      revision:
-        required: true
-        type: string
       melange_package:
         default: false
         type: boolean
@@ -45,38 +42,13 @@ jobs:
           config: ${{ inputs.image }}/${{ inputs.image }}.melange.yaml
           repository-path: ${{ github.workspace }}/${{ inputs.image }}/packages
           archs: x86_64,aarch64
-      - name: Generate date
-        id: source-date
-        run: |
-          echo "date=$(date -u +%Y-%m-%dT%H:%M:%S)" >> ${GITHUB_OUTPUT}
-          echo "epoch=$(date -u +%s)" >> ${GITHUB_OUTPUT}
-        shell: sh
-      - name: Generate version if not specified
-        id: set-version
-        run: |
-          INPUT_VERSION="${{ inputs.version }}"
-
-          if [[ -z "$INPUT_VERSION" ]]; then
-            GENERATED_VERSION=$(date +'%Y-%m-%dT%H-%M-%S')
-            echo "Version not specified. Generating: $GENERATED_VERSION"
-          else
-            GENERATED_VERSION="$INPUT_VERSION"
-            echo "Using specified version: $GENERATED_VERSION"
-          fi
-
-          echo "version=$GENERATED_VERSION" >> "$GITHUB_OUTPUT"
       - name: Publish to GitHub Container Registry
-        uses: chainguard-images/actions/apko-snapshot@main
+        uses: chainguard-images/actions/apko-publish@main
         with:
           config: configs/${{ inputs.image }}.apko.yaml
-          base-tag: ghcr.io/${{ inputs.owner }}/${{ inputs.image }}
-          target-tag: latest
-          additional-tags: ${{ steps.set-version.outputs.version }}
-          sbom-attest: true
-          slsa-attest: true
+          tag: ghcr.io/${{ inputs.owner }}/${{ inputs.image }}:${{ inputs.version }}
           generic-user: ${{ inputs.owner }}
           generic-pass: ${{ secrets.gcr_token }}
-          annotations: org.opencontainers.image.revision:${{ inputs.revision }},org.opencontainers.image.created:${{ steps.source-date.outputs.date }},org.opencontainers.image.version:${{ steps.set-version.outputs.version }}
-          source-date-epoch: ${{ steps.source-date.outputs.epoch }}
+          annotations: org.opencontainers.image.source:https://github.com/${{ inputs.owner }}/${{ github.repository }},org.opencontainers.image.version:${{ inputs.version }}
           build-repository-append: ${{ github.workspace }}/${{ inputs.image }}/packages
           keyring-append: ${{ inputs.melange_package && format('{0}/melange.rsa.pub', github.workspace) || '' }}
