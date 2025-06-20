@@ -1,11 +1,5 @@
 name: Build and Upload Wolfi Packages
 on:
-  schedule:
-    - cron: '50 5,17 * * *'  # 5:50 AM and 5:50 PM UTC every day
-  pull_request:
-    paths:
-      - 'wolfi/*'
-  merge_group:
   workflow_dispatch:
 
 concurrency:
@@ -17,7 +11,7 @@ jobs:
     name: Build and upload Wolfi packages
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
       id-token: write
     strategy:
@@ -39,6 +33,12 @@ jobs:
           APK_LIST=$(find *.yaml -type 'f' | tr '\n' ',')
           echo "APK_LIST=$APK_LIST" >> $GITHUB_ENV
 
+      # Write the signing key from GitHub Secret
+      - name: Write Signing Key
+        run: |
+          echo "${{ secrets.MELANGE_SIGNING_KEY }}" > melange.rsa
+          chmod 600 melange.rsa
+
       # Build APKs with melange
       - name: Build APKs
         id: melange
@@ -47,14 +47,29 @@ jobs:
           archs: aarch64,x86_64
           empty-workspace: false
           multi-config: ${{ env.APK_LIST }}
-          sign-with-temporary-key: true
           workdir: ./wolfi
 
-      # Upload packages
-      - name: 'Upload built packages archive to Github Artifacts'
-        uses: actions/upload-artifact@v4
+      # Copy the public key to the packages directory
+      - name: Copy Public Key to Packages
+        run: |
+          if [ -f "melange.rsa.pub" ]; then
+            cp melange.rsa.pub ./packages/
+            echo "Copied melange.rsa.pub to ./packages/"
+          else
+            echo "melange.rsa.pub not found in the workspace directory"
+            exit 1
+          fi
+
+      # Deploy packages to gh-pages branch
+      # This action will create the gh-pages branch for you if it doesn't exist.
+      # It will also overwrite the contents of the branch on each run
+      # to ensure it always reflects the latest package builds.
+      - name: Deploy packages to gh-pages branch
+        if: github.event_name != 'pull_request'
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          name: wolfi-packages
-          path: ./packages
-          retention-days: 1 # Low ttl since this is just an intermediary used once
-          if-no-files-found: error
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./packages
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Deploy Wolfi APKs to gh-pages'
