@@ -6,13 +6,13 @@ on:
     branches:
       - main
     paths:
-      - '.github/workflows/actions/**'
+      - '.github/workflows/_shared**'
       - '.github/workflows/istio-distroless.yml'
       - 'configs/istio-distroless**'
       - 'package-configs/alauda-baselayout**'
   pull_request:
     paths:
-      - '.github/workflows/actions/**'
+      - '.github/workflows/_shared**'
       - '.github/workflows/istio-distroless.yml'
       - 'configs/istio-distroless**'
       - 'package-configs/alauda-baselayout**'
@@ -20,7 +20,7 @@ on:
 jobs:
   build:
     if: github.event_name == 'pull_request'
-    uses: ./.github/workflows/actions/build.yaml
+    uses: ./.github/workflows/_shared_build.yaml
     with:
       owner: ${{ github.repository_owner }}
       image: distroless
@@ -33,7 +33,7 @@ jobs:
       id-token: write
       packages: write
     if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/actions/publish.yaml
+    uses: ./.github/workflows/_shared_publish.yaml
     with:
       owner: ${{ github.repository_owner }}
       image: distroless
@@ -46,7 +46,7 @@ jobs:
     permissions:
       packages: write
     if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/actions/cleanup.yaml
+    uses: ./.github/workflows/_shared_cleanup.yaml
     with:
       owner: ${{ github.repository_owner }}
       image: distroless
