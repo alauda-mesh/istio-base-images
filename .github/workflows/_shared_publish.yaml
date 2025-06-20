@@ -68,7 +68,7 @@ jobs:
       - name: Publish to GitHub Container Registry
         uses: chainguard-images/actions/apko-snapshot@main
         with:
-          config: ${{ inputs.image }}/${{ inputs.image }}.apko.yaml
+          config: configs/${{ inputs.image }}.apko.yaml
           base-tag: ghcr.io/${{ inputs.owner }}/${{ inputs.image }}
           target-tag: latest
           additional-tags: ${{ steps.set-version.outputs.version }}

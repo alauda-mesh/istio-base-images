@@ -29,13 +29,13 @@ jobs:
         if: ${{ inputs.melange_package }}
         with:
           sign-with-temporary-key: true
-          config: ${{ inputs.image }}/${{ inputs.image }}.melange.yaml
+          config: package-configs/${{ inputs.image }}/${{ inputs.image }}.melange.yaml
           repository-path: ${{ github.workspace }}/${{ inputs.image }}/packages
           archs: x86_64,aarch64
       - name: Build image
         uses: chainguard-images/actions/apko-build@main
         with:
-          config: ${{ inputs.image }}/${{ inputs.image }}.apko.yaml
+          config: configs/${{ inputs.image }}.apko.yaml
           tag: ghcr.io/${{ inputs.owner }}/${{ inputs.image }}:${{ inputs.version }}
           build-repository-append: ${{ github.workspace }}/${{ inputs.image }}/packages
           keyring-append: ${{ inputs.melange_package && format('{0}/melange.rsa.pub', github.workspace) || '' }}
