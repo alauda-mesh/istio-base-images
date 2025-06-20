@@ -1,11 +1,11 @@
-name: Build istio base distroless image
+name: Build istio iptables image
 on:
   push:
     branches:
       - main
     paths:
       - '.github/workflows/_shared**'
-      - '.github/workflows/istio-distroless.yml'
+      - '.github/workflows/istio-iptables.yml'
       - 'configs/distroless.apko.yaml'
   pull_request:
     paths:
@@ -19,7 +19,7 @@ jobs:
     uses: ./.github/workflows/_shared_build.yaml
     with:
       owner: ${{ github.repository_owner }}
-      image: distroless
+      image: iptables
       version: pr-${{ github.event.pull_request.head.sha }}
   publish:
     permissions:
@@ -31,7 +31,7 @@ jobs:
     uses: ./.github/workflows/_shared_publish.yaml
     with:
       owner: ${{ github.repository_owner }}
-      image: distroless
+      image: iptables
       revision: ${{ github.sha }}
     secrets:
       gcr_token: ${{ secrets.GITHUB_TOKEN }}
