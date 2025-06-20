@@ -1,0 +1,35 @@
+contents:
+  build_repositories:
+    - '@local packages'
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  repositories:
+    - https://packages.wolfi.dev/os
+  packages:
+    - wolfi-baselayout
+    - alauda-baselayout@local
+    - ca-certificates-bundle
+    - tzdata
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65535
+    - groupname: istio-proxy
+      gid: 1337
+  users:
+    - username: nonroot
+      uid: 65535
+      gid: 65535
+      shell: /sbin/nologin
+    - username: istio-proxy
+      uid: 1337
+      gid: 1337
+      homedir: /nonexistent
+      shell: /sbin/nologin
+  run-as: 65535
+
+archs:
+  - amd64
+  - aarch64
+

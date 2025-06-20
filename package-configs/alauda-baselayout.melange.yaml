@@ -1,0 +1,44 @@
+package:
+  name: alauda-baselayout
+  version: 20250620
+  epoch: 0
+  description: Secure Alauda Baselayout
+  target-architecture:
+    - all
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    replaces:
+      - wolfi-baselayout
+
+environment:
+  contents:
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    repositories:
+      - https://packages.wolfi.dev/os
+    packages:
+      - busybox
+      - wolfi-baselayout
+
+pipeline:
+  - name: Generate /etc/shadow
+    runs: |
+      # Set a '*' for the root password to make scanners happy
+      awk -F: '{
+          pw = ":!:"
+          if ($1 == "root") { pw = ":*:" }
+          print($1 pw ":0:::::")
+      }' vendor/etc/passwd > vendor/etc/shadow
+
+  - name: Install
+    runs: |
+      for i in etc; do
+        mkdir -p "${{targets.destdir}}"/${i}
+      done
+
+      for i in etc/passwd; do
+        install -m644 vendor/${i} "${{targets.destdir}}"/${i}
+      done
+
+      install -m600 vendor/etc/shadow "${{targets.destdir}}"/etc/shadow
