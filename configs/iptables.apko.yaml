@@ -7,6 +7,8 @@ contents:
     - https://alauda-mesh.github.io/istio-base-images/melange.rsa.pub
   packages:
     - ca-certificates-bundle
+    # related issue: https://github.com/istio/istio/pull/57484
+    # but we may need wolfi-baselayout
     - wolfi-baselayout
     - alauda-baselayout
     - glibc
@@ -16,6 +18,8 @@ contents:
     - libnfnetlink
     - libmnl
     - libgcc
+    # see detail: https://github.com/istio/istio/pull/56917
+    - nftables-slim
 archs:
   - x86_64
   - aarch64
