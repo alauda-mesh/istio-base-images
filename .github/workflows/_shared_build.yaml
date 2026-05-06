@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v5
       - name: Setup QEMU
         if: ${{ inputs.melange_package }}
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
       - name: Build apk package (melange)
         uses: chainguard-dev/actions/melange-build@main
         if: ${{ inputs.melange_package }}
