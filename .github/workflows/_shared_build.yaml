@@ -38,14 +38,17 @@ jobs:
           config: configs/${{ inputs.image }}.apko.yaml
           tag: ghcr.io/${{ inputs.owner }}/${{ inputs.image }}:${{ inputs.version }}
           build-repository-append: ${{ github.workspace }}/${{ inputs.image }}/packages
-          keyring-append: ${{ inputs.melange_package && format('{0}/melange.rsa.pub', github.workspace) || '' }}
+          keyring-append: ${{ inputs.melange_package && format('{0}/melange.rsa.pub',
+            github.workspace) || '' }}
       - name: Load image into docker daemon
         run: docker load < output.tar
       - name: Dive analysis (amd64)
-        uses: MaxymVlasov/dive-action@v1.5.0
+        uses: MaxymVlasov/dive-action@v2.0.0
         with:
-          image: ghcr.io/${{ inputs.owner }}/${{ inputs.image }}:${{ inputs.version }}-amd64
+          image: ghcr.io/${{ inputs.owner }}/${{ inputs.image }}:${{ inputs.version
+            }}-amd64
       - name: Dive analysis (arm64)
-        uses: MaxymVlasov/dive-action@v1.5.0
+        uses: MaxymVlasov/dive-action@v2.0.0
         with:
-          image: ghcr.io/${{ inputs.owner }}/${{ inputs.image }}:${{ inputs.version }}-arm64
+          image: ghcr.io/${{ inputs.owner }}/${{ inputs.image }}:${{ inputs.version
+            }}-arm64
