@@ -1,0 +1,78 @@
+name: Sync images to build-harbor
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '镜像 tag（留空 = 使用当前 VERSION 文件内容）'
+        required: false
+        default: ''
+      image:
+        description: '镜像名（ghcr.io 侧名称）'
+        required: false
+        default: 'iptables'
+
+env:
+  # 与 istio 仓库 workflow 保持一致：self-hosted runner 出外网可能依赖代理（vars 未配置时为空，无副作用）
+  http_proxy: ${{ vars.http_proxy }}
+  https_proxy: ${{ vars.https_proxy }}
+  no_proxy: ${{ vars.no_proxy }}
+  GHCR_PREFIX: ghcr.io/alauda-mesh
+  HARBOR_PREFIX: build-harbor.alauda.cn/asm
+
+jobs:
+  sync:
+    runs-on: [ self-hosted, linux, x64 ]
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+
+      - name: 确定镜像版本
+        id: ver
+        # dispatch 输入经 env 传递，避免 ${{ }} 拼接进脚本造成注入
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          # 未指定 version 输入时回退到 VERSION 文件内容
+          VERSION="$INPUT_VERSION"
+          if [ -z "$VERSION" ]; then
+            VERSION="$(cat VERSION)"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login Harbor
+        uses: docker/login-action@v4
+        with:
+          registry: build-harbor.alauda.cn
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
+
+      - name: 同步镜像
+        id: sync
+        uses: ./.github/actions/sync-image
+        with:
+          source: ${{ env.GHCR_PREFIX }}/${{ inputs.image }}:${{ steps.ver.outputs.version }}
+          target: ${{ env.HARBOR_PREFIX }}/istio-${{ inputs.image }}:${{ steps.ver.outputs.version }}
+          overwrite: 'true'
+
+      - name: 写入结果摘要
+        # dispatch 输入与 step 输出经 env 传递，避免 ${{ }} 拼接进脚本
+        env:
+          IMAGE_NAME: ${{ inputs.image }}
+          VERSION: ${{ steps.ver.outputs.version }}
+          SYNCED: ${{ steps.sync.outputs.synced }}
+        run: |
+          {
+            echo "## 镜像同步结果"
+            echo ""
+            echo "- 源：\`${GHCR_PREFIX}/${IMAGE_NAME}:${VERSION}\`"
+            echo "- 目标：\`${HARBOR_PREFIX}/istio-${IMAGE_NAME}:${VERSION}\`"
+            echo "- 执行复制：${SYNCED}"
+          } >> "$GITHUB_STEP_SUMMARY"
