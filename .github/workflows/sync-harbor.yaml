@@ -13,6 +13,10 @@ on:
         default: 'iptables'
 
 env:
+  # 与 istio 仓库 workflow 保持一致：self-hosted runner 出外网可能依赖代理（vars 未配置时为空，无副作用）
+  http_proxy: ${{ vars.http_proxy }}
+  https_proxy: ${{ vars.https_proxy }}
+  no_proxy: ${{ vars.no_proxy }}
   GHCR_PREFIX: ghcr.io/alauda-mesh
   HARBOR_PREFIX: build-harbor.alauda.cn/asm
 
