@@ -24,15 +24,20 @@ runs:
     - name: 检查并复制镜像
       id: copy
       shell: bash
+      # 输入经 env 传递给 shell，避免 ${{ }} 直接拼接进脚本造成注入
+      env:
+        SOURCE: ${{ inputs.source }}
+        TARGET: ${{ inputs.target }}
+        OVERWRITE: ${{ inputs.overwrite }}
       run: |
         set -euo pipefail
         # 目标已存在且不要求覆盖时跳过（幂等）
-        if [ "${{ inputs.overwrite }}" != "true" ] \
-           && docker buildx imagetools inspect "${{ inputs.target }}" >/dev/null 2>&1; then
-          echo "目标镜像已存在，跳过同步: ${{ inputs.target }}"
+        if [ "$OVERWRITE" != "true" ] \
+           && docker buildx imagetools inspect "$TARGET" >/dev/null 2>&1; then
+          echo "目标镜像已存在，跳过同步: $TARGET"
           echo "synced=false" >> "$GITHUB_OUTPUT"
           exit 0
         fi
         # 单命令跨 registry 复制 manifest list，原生保留 amd64+aarch64 多架构
-        docker buildx imagetools create --tag "${{ inputs.target }}" "${{ inputs.source }}"
+        docker buildx imagetools create --tag "$TARGET" "$SOURCE"
         echo "synced=true" >> "$GITHUB_OUTPUT"
