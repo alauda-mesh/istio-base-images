@@ -48,15 +48,15 @@ if [ "$count" -eq 0 ]; then
   echo "镜像无漏洞: ${IMAGE_ADDR}" >&2
 else
   echo "clean=false" >> "$GITHUB_OUTPUT"
-  # 生成去重后的 Markdown 明细表（多行 output 用 heredoc 分隔符语法）
+  # 生成去重后的 Markdown 明细表（多行 output 用 heredoc 分隔符语法，分隔符加进程号防注入）
   {
-    echo "vulns_md<<EOF_VULNS"
+    echo "vulns_md<<EOF_VULNS_$$"
     echo "| CVE | 包名 | 当前版本 | 修复版本 | 严重度 |"
     echo "| --- | --- | --- | --- | --- |"
     jq -r '((.os // []) + (.lang // []))
       | unique_by(.VulnerabilityID + "/" + .PkgName)
       | .[] | "| \(.VulnerabilityID) | \(.PkgName) | \(.InstalledVersion) | \(.FixedVersion) | \(.Severity) |"' <<<"$resp"
-    echo "EOF_VULNS"
+    echo "EOF_VULNS_$$"
   } >> "$GITHUB_OUTPUT"
   echo "发现 ${count} 条漏洞记录（去重前）: ${IMAGE_ADDR}" >&2
 fi
