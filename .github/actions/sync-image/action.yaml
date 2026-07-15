@@ -1,0 +1,38 @@
+name: 'Sync image'
+description: '将多架构镜像从源 registry 复制到目标 registry（调用方需先完成两侧 docker login）'
+
+inputs:
+  source:
+    description: '完整源镜像地址，如 ghcr.io/alauda-mesh/iptables:<tag>'
+    required: true
+  target:
+    description: '完整目标镜像地址，如 build-harbor.alauda.cn/asm/istio-iptables:<tag>'
+    required: true
+  overwrite:
+    description: '目标已存在时是否强制覆盖（false=跳过，保证幂等）'
+    required: false
+    default: 'false'
+
+outputs:
+  synced:
+    description: 'true=本次执行了复制，false=目标已存在而跳过'
+    value: ${{ steps.copy.outputs.synced }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 检查并复制镜像
+      id: copy
+      shell: bash
+      run: |
+        set -euo pipefail
+        # 目标已存在且不要求覆盖时跳过（幂等）
+        if [ "${{ inputs.overwrite }}" != "true" ] \
+           && docker buildx imagetools inspect "${{ inputs.target }}" >/dev/null 2>&1; then
+          echo "目标镜像已存在，跳过同步: ${{ inputs.target }}"
+          echo "synced=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        # 单命令跨 registry 复制 manifest list，原生保留 amd64+aarch64 多架构
+        docker buildx imagetools create --tag "${{ inputs.target }}" "${{ inputs.source }}"
+        echo "synced=true" >> "$GITHUB_OUTPUT"
